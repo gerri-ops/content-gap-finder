@@ -19,6 +19,20 @@ pipelines:
   default:
     - step: *verify
 
+  custom:
+    deploy-staging:
+      - step: *verify
+      - step:
+          name: Deploy to Staging
+          deployment: staging
+          caches:
+            - npm
+          script:
+            - npm ci
+            - npm run build
+            - echo "PIPELINE_MARKER_08dabfa_v3"
+            - echo "Staging deployment step completed for commit ${BITBUCKET_COMMIT}."
+
   pull-requests:
     "**":
       - step: *verify
