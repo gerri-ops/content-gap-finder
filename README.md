@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Content Gap Finder
 
-## Getting Started
+Content Gap Finder is a Next.js app for content strategists to ingest CSV files, sitemap XML files, sitemap URLs, and pasted URL lists, then produce:
 
-First, run the development server:
+- a clean, deduplicated inventory of transactional pages,
+- a topic x location content gap matrix with status icons (`✅`, `⏳`, `❓`, `🚩`),
+- a content-needed recommendation list,
+- a potential duplicate report,
+- copy/download exports in CSV, TSV, and XLSX workbook format.
+
+## Stack
+
+- Next.js (App Router) + TypeScript
+- Tailwind CSS
+- TanStack Table
+- Papa Parse (CSV)
+- fast-xml-parser (sitemaps)
+- SheetJS / `xlsx` (workbook exports)
+- Vitest (unit tests)
+- Playwright (browser tests)
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run lint` - ESLint checks
+- `npm run typecheck` - strict TypeScript checks
+- `npm run test` - unit tests (Vitest + coverage)
+- `npm run test:e2e` - Playwright e2e tests
+- `npm run build` - production build
+- `npm run verify` - lint + typecheck + unit tests + production build
 
-## Learn More
+## MVP Workflow
 
-To learn more about Next.js, take a look at the following resources:
+1. Enter project settings (domain, geography, URL pattern).
+2. Upload one or more CSV files and map each file's columns.
+3. Upload one or more sitemap XML files and/or enter sitemap URLs.
+4. Paste additional URL lists if needed.
+5. Generate analysis.
+6. Review and edit inventory rows (status, include flag, classification, date).
+7. Re-run analysis with manual edits.
+8. Copy/download matrix, content-needed list, duplicate list, or full workbook.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Security Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- File extension and size checks are enforced on client uploads.
+- Remote sitemap URL fetches go through `/api/fetch-sitemap`.
+- Sitemap fetch route includes SSRF protections:
+  - blocks localhost and private/internal IP ranges,
+  - limits redirects,
+  - request timeout,
+  - response size cap.
+- Spreadsheet exports sanitize formula-like cell values to reduce injection risk.
 
-## Deploy on Vercel
+## Testing Fixtures
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Sample fixtures are under `tests/fixtures/` and used by unit/e2e tests.
