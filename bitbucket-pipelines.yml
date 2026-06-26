@@ -1,6 +1,5 @@
 image: node:20
 
-# Force-push marker for pipeline retrigger.
 options:
   max-time: 20
 
@@ -27,3 +26,12 @@ pipelines:
   branches:
     main:
       - step: *verify
+      - step:
+          name: Deploy to Staging
+          deployment: staging
+          caches:
+            - npm
+          script:
+            - npm ci
+            - npm run build
+            - echo "Staging deployment step completed for commit ${BITBUCKET_COMMIT}."
