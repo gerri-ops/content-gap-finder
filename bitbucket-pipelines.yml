@@ -34,4 +34,5 @@ pipelines:
           script:
             - npm ci
             - npm run build
+            - echo "PIPELINE_MARKER_08dabfa_v2"
             - echo "Staging deployment step completed for commit ${BITBUCKET_COMMIT}."
