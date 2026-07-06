@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { normalizeUrl } from "@/lib/normalize/url";
 import { isTransactionalPage } from "@/lib/classify/transactional";
+import { resolvePublishedDate } from "@/lib/publishedDate";
 
 function parseStatus(value?: string): ContentStatus {
   const lower = value?.toLowerCase().trim() ?? "";
@@ -100,6 +101,7 @@ export function parseCsvSource(file: CsvSourceFile): UrlRecord[] {
         inferLocationFromUrl(normalizedUrl);
 
       const base = createRecordBase("csv", file.name);
+      const status = parseStatus(mapping.status ? row[mapping.status] : undefined);
       const record: UrlRecord = {
         ...base,
         id: `${file.id}-row-${index}`,
@@ -108,10 +110,11 @@ export function parseCsvSource(file: CsvSourceFile): UrlRecord[] {
         pageTitle: mapping.pageTitle ? row[mapping.pageTitle]?.trim() : undefined,
         topic,
         location,
-        status: parseStatus(mapping.status ? row[mapping.status] : undefined),
-        publishedDate: mapping.publishedDate
-          ? row[mapping.publishedDate]?.trim()
-          : undefined,
+        status,
+        publishedDate: resolvePublishedDate(
+          status,
+          mapping.publishedDate ? row[mapping.publishedDate]?.trim() : undefined,
+        ),
         contentType: mapping.contentType
           ? row[mapping.contentType]?.trim()
           : undefined,

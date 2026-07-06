@@ -16,6 +16,7 @@ import {
 } from "@/lib/normalize/url";
 import { isFaqRow, isFaqTopicName } from "@/lib/classify/faq";
 import { strongestStatus } from "@/lib/ingest/parsers";
+import { resolvePublishedDate } from "@/lib/publishedDate";
 
 function makeCellKey(topic: string, location: string): string {
   return `${topic}|||${location}`;
@@ -269,7 +270,10 @@ export function buildPipeline(
 
   const dedupedInventory = [...normalizedMap.entries()].map(([url, rows], index) => {
     const status = strongestStatus(rows.map((row) => row.status), "needed");
-    const publishedDate = rows.find((row) => row.publishedDate)?.publishedDate;
+    const publishedDate = resolvePublishedDate(
+      status,
+      rows.find((row) => row.status === "published" && row.publishedDate)?.publishedDate,
+    );
     const lastUpdatedDate = rows.find((row) => row.lastUpdatedDate)?.lastUpdatedDate;
     const canonicalUrl = rows.find((row) => row.canonicalUrl)?.canonicalUrl;
     const first = rows[0];

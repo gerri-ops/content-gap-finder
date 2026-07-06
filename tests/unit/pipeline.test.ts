@@ -129,4 +129,48 @@ describe("buildPipeline", () => {
       "https://example.com/tampa/car-accident-lawyer",
     );
   });
+
+  it("clears publishedDate from clean inventory when status is not published", () => {
+    const rows = [
+      makeRecord(
+        {
+          status: "in_progress",
+          publishedDate: "2024-01-15",
+        },
+        1,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+
+    expect(result.cleanInventory[0]?.status).toBe("in_progress");
+    expect(result.cleanInventory[0]?.publishedDate).toBeUndefined();
+  });
+
+  it("rebuilds matrix from manually corrected location alias", () => {
+    const rows = [
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/st-pete/car-accident-lawyer",
+          originalUrl: "https://example.com/st-pete/car-accident-lawyer",
+          topic: "Car Accident Lawyer",
+          location: "St Pete",
+        },
+        1,
+      ),
+    ];
+    const initial = buildPipeline(rows, settings);
+    expect(initial.matrix.locations).toContain("St Pete");
+
+    const corrected = initial.cleanInventory.map((row) => ({
+      ...row,
+      location: "Tampa",
+    }));
+    const rebuilt = buildPipeline(corrected, settings);
+
+    expect(rebuilt.matrix.locations).toContain("Tampa");
+    expect(rebuilt.matrix.cells["Car Accident Lawyer|||Tampa"]?.status).toBe(
+      "published",
+    );
+    expect(rebuilt.matrix.cells["Car Accident Lawyer|||St Pete"]).toBeUndefined();
+  });
 });

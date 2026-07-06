@@ -20,6 +20,7 @@ import {
   parseUrlList,
 } from "@/lib/ingest/parsers";
 import { buildPipeline } from "@/lib/matrix/pipeline";
+import { formatPublishedDateForDisplay } from "@/lib/publishedDate";
 import type {
   ContentStatus,
   CsvFieldMapping,
@@ -118,12 +119,28 @@ export function ContentGapFinderApp() {
       {
         header: "Topic",
         accessorKey: "topic",
-        cell: ({ row }) => row.original.topic ?? "",
+        cell: ({ row }) => (
+          <input
+            className="min-w-[10rem] rounded border border-slate-300 px-2 py-1"
+            value={row.original.topic ?? ""}
+            onChange={(event) =>
+              updateInventoryRow(row.original.id, { topic: event.target.value || undefined })
+            }
+          />
+        ),
       },
       {
         header: "Location",
         accessorKey: "location",
-        cell: ({ row }) => row.original.location ?? "",
+        cell: ({ row }) => (
+          <input
+            className="min-w-[8rem] rounded border border-slate-300 px-2 py-1"
+            value={row.original.location ?? ""}
+            onChange={(event) =>
+              updateInventoryRow(row.original.id, { location: event.target.value || undefined })
+            }
+          />
+        ),
       },
       {
         header: "Type",
@@ -151,7 +168,10 @@ export function ContentGapFinderApp() {
             value={row.original.status}
             onChange={(event) => {
               const value = event.target.value as ContentStatus;
-              updateInventoryRow(row.original.id, { status: value });
+              updateInventoryRow(row.original.id, {
+                status: value,
+                ...(value !== "published" ? { publishedDate: undefined } : {}),
+              });
             }}
           >
             <option value="published">✅ Published</option>
@@ -163,15 +183,24 @@ export function ContentGapFinderApp() {
       {
         header: "Published Date",
         accessorKey: "publishedDate",
-        cell: ({ row }) => (
-          <input
-            className="rounded border border-slate-300 px-2 py-1"
-            value={row.original.publishedDate ?? ""}
-            onChange={(event) =>
-              updateInventoryRow(row.original.id, { publishedDate: event.target.value })
-            }
-          />
-        ),
+        cell: ({ row }) => {
+          const isPublished = row.original.status === "published";
+          return (
+            <input
+              className="rounded border border-slate-300 px-2 py-1 disabled:bg-slate-100 disabled:text-slate-400"
+              value={formatPublishedDateForDisplay(
+                row.original.status,
+                row.original.publishedDate,
+              )}
+              disabled={!isPublished}
+              onChange={(event) =>
+                updateInventoryRow(row.original.id, {
+                  publishedDate: event.target.value || undefined,
+                })
+              }
+            />
+          );
+        },
       },
       {
         header: "Include",
@@ -229,15 +258,32 @@ export function ContentGapFinderApp() {
     );
   }
 
-  function recompute(inventoryRows: UrlRecord[]) {
-    const updatedResult = buildPipeline(inventoryRows, {
+  function buildProjectForAnalysis(): ProjectSettings {
+    return {
       ...project,
       targetLocations: targetLocationsText
         .split(",")
         .map((location) => location.trim())
         .filter(Boolean),
+    };
+  }
+
+  function rerunWithManualEdits() {
+    setGlobalError(null);
+    setInventory((currentInventory) => {
+      try {
+        const nextProject = buildProjectForAnalysis();
+        const updatedResult = buildPipeline(currentInventory, nextProject);
+        setResult(updatedResult);
+        setProject(nextProject);
+        return updatedResult.cleanInventory;
+      } catch (error) {
+        setGlobalError(
+          error instanceof Error ? error.message : "Unexpected re-run error.",
+        );
+        return currentInventory;
+      }
     });
-    setResult(updatedResult);
   }
 
   async function handleCsvUpload(fileList: FileList | null) {
@@ -313,13 +359,7 @@ export function ContentGapFinderApp() {
     setLoading(true);
     setGlobalError(null);
     try {
-      const nextProject = {
-        ...project,
-        targetLocations: targetLocationsText
-          .split(",")
-          .map((location) => location.trim())
-          .filter(Boolean),
-      };
+      const nextProject = buildProjectForAnalysis();
 
       const records: UrlRecord[] = [];
       csvSources.forEach((source) => {
@@ -354,10 +394,6 @@ export function ContentGapFinderApp() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function rerunWithManualEdits() {
-    recompute(inventory);
   }
 
   const matrixRows = result ? buildMatrixRows(result.matrix) : [];
@@ -565,8 +601,10 @@ export function ContentGapFinderApp() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">Clean URL Inventory</h2>
               <button
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium"
+                type="button"
+                className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium disabled:opacity-60"
                 onClick={rerunWithManualEdits}
+                disabled={loading}
               >
                 Re-run with manual edits
               </button>
@@ -629,13 +667,16 @@ export function ContentGapFinderApp() {
                         const duplicateIcon = cell.hasPotentialDuplicate ? " 🚩" : "";
                         const urlDisplay = cell.urls[0]?.normalizedUrl ?? "No URL yet";
                         const titleDisplay = cell.urls[0]?.pageTitle ?? "n/a";
-                        const publishedDisplay = parseDateForTooltip(cell.urls[0]?.publishedDate);
+                        const publishedDisplay =
+                          cell.status === "published"
+                            ? parseDateForTooltip(cell.urls[0]?.publishedDate)
+                            : null;
                         const sourceDisplay = cell.urls[0]?.sourceName ?? "n/a";
                         const tooltip = [
                           `Status: ${statusToLabel(cell.status)}`,
                           `URL: ${urlDisplay}`,
                           `Title: ${titleDisplay}`,
-                          `Published: ${publishedDisplay}`,
+                          publishedDisplay !== null ? `Published: ${publishedDisplay}` : "",
                           `Source: ${sourceDisplay}`,
                           cell.hasPotentialDuplicate
                             ? `Duplicate: ${cell.duplicateReason}`

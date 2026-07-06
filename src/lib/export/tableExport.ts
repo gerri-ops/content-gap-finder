@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 
+import { formatPublishedDateForDisplay } from "@/lib/publishedDate";
 import type {
   DuplicatePair,
   GapMatrix,
@@ -126,7 +127,7 @@ export function exportWorkbook(args: {
     location: row.location ?? "",
     status:
       row.status === "published" ? "✅" : row.status === "in_progress" ? "⏳" : "❓",
-    publishedDate: row.publishedDate ?? "",
+    publishedDate: formatPublishedDateForDisplay(row.status, row.publishedDate),
     sourceName: row.sourceName,
     sourceType: row.sourceType,
     classification: row.classification,
