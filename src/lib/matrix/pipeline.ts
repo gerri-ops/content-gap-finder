@@ -14,6 +14,7 @@ import {
   normalizeUrl,
   slugToLabel,
 } from "@/lib/normalize/url";
+import { isFaqRow, isFaqTopicName } from "@/lib/classify/faq";
 import { strongestStatus } from "@/lib/ingest/parsers";
 
 function makeCellKey(topic: string, location: string): string {
@@ -124,7 +125,7 @@ function resolveTopicsAndLocations(
   const locationSet = new Set<string>();
 
   transactionalRows.forEach((row) => {
-    if (row.topic?.trim()) {
+    if (row.topic?.trim() && !isFaqRow(row)) {
       topicSet.add(toDisplayLabel(row.topic.trim()));
     }
     if (row.location?.trim()) {
@@ -138,8 +139,12 @@ function resolveTopicsAndLocations(
     }
   });
 
+  const topics = [...topicSet]
+    .filter((topic) => !isFaqTopicName(topic))
+    .sort((a, b) => a.localeCompare(b));
+
   return {
-    topics: [...topicSet].sort((a, b) => a.localeCompare(b)),
+    topics,
     locations: [...locationSet].sort((a, b) => a.localeCompare(b)),
   };
 }
@@ -168,6 +173,7 @@ function buildGapMatrix(
     for (const location of locations) {
       const matches = transactionalRows.filter(
         (row) =>
+          !isFaqRow(row) &&
           row.topic?.toLowerCase().trim() === topic.toLowerCase() &&
           row.location?.toLowerCase().trim() === location.toLowerCase() &&
           row.includeInAnalysis,

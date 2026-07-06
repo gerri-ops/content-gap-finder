@@ -75,4 +75,58 @@ describe("buildPipeline", () => {
     const result = buildPipeline(rows, settings);
     expect(result.duplicates.length).toBeGreaterThan(0);
   });
+
+  it("excludes FAQ topics from the content gap matrix", () => {
+    const rows = [
+      makeRecord({}, 1),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/tampa/car-accident-faq",
+          originalUrl: "https://example.com/tampa/car-accident-faq",
+          topic: "Car Accident FAQ",
+        },
+        2,
+      ),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/orlando/faq",
+          originalUrl: "https://example.com/orlando/faq",
+          topic: "FAQ",
+          location: "Orlando",
+        },
+        3,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+
+    expect(result.matrix.topics).not.toContain("Car Accident FAQ");
+    expect(result.matrix.topics).not.toContain("Faq");
+    expect(result.topics).not.toContain("Car Accident FAQ");
+    expect(result.contentNeeded.every((row) => !/faq/i.test(row.topic))).toBe(true);
+    expect(result.cleanInventory.some((row) => /faq/i.test(row.topic ?? ""))).toBe(
+      true,
+    );
+  });
+
+  it("does not let FAQ pages fill matrix cells for service topics", () => {
+    const rows = [
+      makeRecord({}, 1),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/tampa/car-accident-lawyer-faq",
+          originalUrl: "https://example.com/tampa/car-accident-lawyer-faq",
+          topic: "Car Accident Lawyer",
+        },
+        2,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+    const cell = result.matrix.cells["Car Accident Lawyer|||Tampa"];
+
+    expect(result.matrix.topics).toContain("Car Accident Lawyer");
+    expect(cell.urls).toHaveLength(1);
+    expect(cell.urls[0].normalizedUrl).toBe(
+      "https://example.com/tampa/car-accident-lawyer",
+    );
+  });
 });
