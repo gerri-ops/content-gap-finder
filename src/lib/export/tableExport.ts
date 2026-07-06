@@ -1,6 +1,12 @@
 import * as XLSX from "xlsx";
 
 import { statusToIcon } from "@/components/statusIcon";
+import {
+  buildCoverageDetailRows,
+  buildCoverageSummaryRows,
+  computeMatrixSummary,
+  type CoverageStatusFilter,
+} from "@/lib/matrix/summary";
 import { formatPublishedDateForDisplay } from "@/lib/publishedDate";
 import type {
   DuplicatePair,
@@ -86,6 +92,54 @@ export function buildMatrixRows(matrix: GapMatrix): Array<Record<string, string>
   });
 }
 
+function sanitizeRowsForSheet(rows: object[]): Array<Record<string, string>> {
+  return rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row as Record<string, unknown>).map(([key, value]) => [
+        key,
+        sanitizeSpreadsheetValue(value),
+      ]),
+    ),
+  );
+}
+
+export function exportCoverageWorkbook(args: {
+  filename: string;
+  matrix: GapMatrix;
+  statusFilter?: CoverageStatusFilter;
+  includeSummary?: boolean;
+}): void {
+  const workbook = XLSX.utils.book_new();
+  const statusFilter = args.statusFilter ?? "all";
+  const summary = computeMatrixSummary(args.matrix);
+  const summaryRows = buildCoverageSummaryRows(summary);
+  const detailRows = buildCoverageDetailRows(args.matrix, statusFilter);
+
+  const sheets: Array<{ name: string; rows: object[] }> = [];
+
+  if (args.includeSummary ?? statusFilter === "all") {
+    sheets.push({ name: "Coverage Summary", rows: summaryRows });
+  }
+
+  const detailSheetName =
+    statusFilter === "all"
+      ? "All Coverage Cells"
+      : statusFilter === "in_progress"
+        ? "In Progress Cells"
+        : statusFilter === "published"
+          ? "Published Cells"
+          : "Needed Cells";
+
+  sheets.push({ name: detailSheetName, rows: detailRows });
+
+  sheets.forEach(({ name, rows }) => {
+    const worksheet = XLSX.utils.json_to_sheet(sanitizeRowsForSheet(rows));
+    XLSX.utils.book_append_sheet(workbook, worksheet, name);
+  });
+
+  XLSX.writeFile(workbook, args.filename);
+}
+
 export function exportWorkbook(args: {
   filename: string;
   matrix: GapMatrix;
@@ -136,8 +190,13 @@ export function exportWorkbook(args: {
       preferredUrlPattern: args.settings.preferredUrlPattern,
     },
   ];
+  const summary = computeMatrixSummary(args.matrix);
+  const summaryRows = buildCoverageSummaryRows(summary);
+  const coverageDetailRows = buildCoverageDetailRows(args.matrix);
 
   const sheets = [
+    { name: "Coverage Summary", rows: summaryRows },
+    { name: "Coverage Cells", rows: coverageDetailRows },
     { name: "Content Gap Matrix", rows: matrixRows },
     { name: "Content Needed", rows: neededRows },
     { name: "Potential Duplicates", rows: duplicateRows },
@@ -146,12 +205,7 @@ export function exportWorkbook(args: {
   ];
 
   sheets.forEach(({ name, rows }) => {
-    const sanitizedRows = rows.map((row) =>
-      Object.fromEntries(
-        Object.entries(row).map(([key, value]) => [key, sanitizeSpreadsheetValue(value)]),
-      ),
-    );
-    const worksheet = XLSX.utils.json_to_sheet(sanitizedRows);
+    const worksheet = XLSX.utils.json_to_sheet(sanitizeRowsForSheet(rows));
     XLSX.utils.book_append_sheet(workbook, worksheet, name);
   });
 

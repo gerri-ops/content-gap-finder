@@ -107,6 +107,70 @@ describe("buildPipeline", () => {
     );
   });
 
+  it("excludes /faqs/ path URLs from matrix cells and content lists", () => {
+    const rows = [
+      makeRecord({}, 1),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/tampa/faqs/car-accident-lawyer",
+          originalUrl: "https://example.com/tampa/faqs/car-accident-lawyer",
+          topic: "Car Accident Lawyer",
+          location: "Tampa",
+        },
+        2,
+      ),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/orlando/faqs/truck-accident-lawyer",
+          originalUrl: "https://example.com/orlando/faqs/truck-accident-lawyer",
+          topic: "Truck Accident Lawyer",
+          location: "Orlando",
+          status: "published",
+        },
+        3,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+    const matrixUrls = Object.values(result.matrix.cells).flatMap((cell) =>
+      cell.urls.map((row) => row.normalizedUrl),
+    );
+
+    expect(matrixUrls.every((url) => !/\/faqs(\/|$)/i.test(url))).toBe(true);
+    expect(result.matrix.locations).not.toContain("Faqs");
+    expect(result.matrix.topics).not.toContain("Truck Accident Lawyer");
+    expect(result.matrix.topics).toContain("Car Accident Lawyer");
+
+    const tampaCell = result.matrix.cells["Car Accident Lawyer|||Tampa"];
+    expect(tampaCell.urls).toHaveLength(1);
+    expect(tampaCell.urls[0]?.normalizedUrl).toBe(
+      "https://example.com/tampa/car-accident-lawyer",
+    );
+
+    expect(result.contentNeeded.every((row) => !/faq/i.test(row.topic))).toBe(true);
+    expect(
+      result.contentNeeded.every((row) => !/\/faqs(\/|$)/i.test(row.proposedUrl)),
+    ).toBe(true);
+  });
+
+  it("does not add Faqs as a matrix location from /faqs/ root URLs", () => {
+    const rows = [
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/faqs/truck-accident-lawyer",
+          originalUrl: "https://example.com/faqs/truck-accident-lawyer",
+          topic: "Truck Accident Lawyer",
+          location: "Faqs",
+        },
+        1,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+
+    expect(result.matrix.locations).not.toContain("Faqs");
+    expect(result.matrix.topics).not.toContain("Truck Accident Lawyer");
+    expect(result.contentNeeded).toHaveLength(0);
+  });
+
   it("does not let FAQ pages fill matrix cells for service topics", () => {
     const rows = [
       makeRecord({}, 1),

@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import Papa from "papaparse";
 
 import { DataTable } from "@/components/DataTable";
+import { TopicSummaryOverview } from "@/components/TopicSummaryOverview";
 import { statusToIcon, statusToLabel } from "@/components/statusIcon";
 import {
   copyDelimited,
@@ -609,6 +610,8 @@ export function ContentGapFinderApp() {
             <DataTable columns={inventoryColumns} data={inventory} />
           </section>
 
+          <TopicSummaryOverview matrix={result.matrix} projectName={project.name} />
+
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">Content Gap Matrix</h2>
@@ -772,8 +775,9 @@ export function ContentGapFinderApp() {
               </button>
             </div>
             <p className="text-sm text-slate-600">
-              Workbook includes matrix, content-needed list, duplicates, clean inventory,
-              and project settings. Spreadsheet formulas are escaped to prevent injection.
+              Workbook includes coverage summary, coverage detail rows, matrix,
+              content-needed list, duplicates, clean inventory, and project settings.
+              Spreadsheet formulas are escaped to prevent injection.
             </p>
           </section>
         </>

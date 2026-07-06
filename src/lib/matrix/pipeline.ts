@@ -126,7 +126,10 @@ function resolveTopicsAndLocations(
   const locationSet = new Set<string>();
 
   transactionalRows.forEach((row) => {
-    if (row.topic?.trim() && !isFaqRow(row)) {
+    if (isFaqRow(row)) {
+      return;
+    }
+    if (row.topic?.trim()) {
       topicSet.add(toDisplayLabel(row.topic.trim()));
     }
     if (row.location?.trim()) {
@@ -144,10 +147,11 @@ function resolveTopicsAndLocations(
     .filter((topic) => !isFaqTopicName(topic))
     .sort((a, b) => a.localeCompare(b));
 
-  return {
-    topics,
-    locations: [...locationSet].sort((a, b) => a.localeCompare(b)),
-  };
+  const locations = [...locationSet]
+    .filter((location) => !isFaqTopicName(location))
+    .sort((a, b) => a.localeCompare(b));
+
+  return { topics, locations };
 }
 
 function buildGapMatrix(
@@ -293,13 +297,14 @@ export function buildPipeline(
   const transactionalRows = withInferredTaxonomy.filter(
     (row) => row.classification === "transactional",
   );
-  const duplicates = computeDuplicates(transactionalRows);
+  const matrixRows = transactionalRows.filter((row) => !isFaqRow(row));
+  const duplicates = computeDuplicates(matrixRows);
   const { topics, locations } = resolveTopicsAndLocations(
-    transactionalRows,
+    matrixRows,
     projectSettings,
   );
-  const detectedUrlPattern = inferPattern(transactionalRows);
-  const matrix = buildGapMatrix(transactionalRows, topics, locations, duplicates);
+  const detectedUrlPattern = inferPattern(matrixRows);
+  const matrix = buildGapMatrix(matrixRows, topics, locations, duplicates);
   const contentNeeded = buildContentNeeded(matrix, projectSettings);
 
   return {

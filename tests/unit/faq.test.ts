@@ -22,8 +22,14 @@ describe("hasFaqPathSegment", () => {
     expect(hasFaqPathSegment("https://example.com/faqs/car-accident-lawyer")).toBe(
       true,
     );
+    expect(hasFaqPathSegment("https://example.com/tampa/faqs/car-accident-lawyer")).toBe(
+      true,
+    );
     expect(hasFaqPathSegment("https://example.com/tampa/car-accident-lawyer-faq")).toBe(
       true,
+    );
+    expect(hasFaqPathSegment("https://example.com/tampa/car-accident-lawyer")).toBe(
+      false,
     );
   });
 });
