@@ -14,7 +14,8 @@ import {
   normalizeUrl,
   slugToLabel,
 } from "@/lib/normalize/url";
-import { isFaqRow, isFaqTopicName } from "@/lib/classify/faq";
+import { isMatrixEligible } from "@/lib/classify/analysisEligibility";
+import { isFaqTopicName } from "@/lib/classify/faq";
 import { strongestStatus } from "@/lib/ingest/parsers";
 import { resolvePublishedDate } from "@/lib/publishedDate";
 
@@ -119,16 +120,13 @@ function toDisplayLabel(value: string): string {
 }
 
 function resolveTopicsAndLocations(
-  transactionalRows: UrlRecord[],
+  analysisRows: UrlRecord[],
   projectSettings: ProjectSettings,
 ): { topics: string[]; locations: string[] } {
   const topicSet = new Set<string>();
   const locationSet = new Set<string>();
 
-  transactionalRows.forEach((row) => {
-    if (isFaqRow(row)) {
-      return;
-    }
+  analysisRows.forEach((row) => {
     if (row.topic?.trim()) {
       topicSet.add(toDisplayLabel(row.topic.trim()));
     }
@@ -155,7 +153,7 @@ function resolveTopicsAndLocations(
 }
 
 function buildGapMatrix(
-  transactionalRows: UrlRecord[],
+  analysisRows: UrlRecord[],
   topics: string[],
   locations: string[],
   duplicates: DuplicatePair[],
@@ -176,12 +174,10 @@ function buildGapMatrix(
 
   for (const topic of topics) {
     for (const location of locations) {
-      const matches = transactionalRows.filter(
+      const matches = analysisRows.filter(
         (row) =>
-          !isFaqRow(row) &&
           row.topic?.toLowerCase().trim() === topic.toLowerCase() &&
-          row.location?.toLowerCase().trim() === location.toLowerCase() &&
-          row.includeInAnalysis,
+          row.location?.toLowerCase().trim() === location.toLowerCase(),
       );
 
       const key = makeCellKey(topic, location);
@@ -294,17 +290,14 @@ export function buildPipeline(
   });
 
   const withInferredTaxonomy = detectAndFillTopicLocation(dedupedInventory);
-  const transactionalRows = withInferredTaxonomy.filter(
-    (row) => row.classification === "transactional",
-  );
-  const matrixRows = transactionalRows.filter((row) => !isFaqRow(row));
-  const duplicates = computeDuplicates(matrixRows);
+  const analysisRows = withInferredTaxonomy.filter(isMatrixEligible);
+  const duplicates = computeDuplicates(analysisRows);
   const { topics, locations } = resolveTopicsAndLocations(
-    matrixRows,
+    analysisRows,
     projectSettings,
   );
-  const detectedUrlPattern = inferPattern(matrixRows);
-  const matrix = buildGapMatrix(matrixRows, topics, locations, duplicates);
+  const detectedUrlPattern = inferPattern(analysisRows);
+  const matrix = buildGapMatrix(analysisRows, topics, locations, duplicates);
   const contentNeeded = buildContentNeeded(matrix, projectSettings);
 
   return {

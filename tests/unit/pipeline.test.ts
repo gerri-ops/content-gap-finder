@@ -209,6 +209,75 @@ describe("buildPipeline", () => {
     expect(result.cleanInventory[0]?.publishedDate).toBeUndefined();
   });
 
+  it("excludes non-transactional pages from matrix, content needed, and duplicates", () => {
+    const rows = [
+      makeRecord({}, 1),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/blog/tampa-case-study",
+          originalUrl: "https://example.com/blog/tampa-case-study",
+          topic: "Tampa Case Study",
+          location: "Blog",
+          classification: "non_transactional",
+          includeInAnalysis: false,
+        },
+        2,
+      ),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/orlando/personal-injury-lawyer",
+          originalUrl: "https://example.com/orlando/personal-injury-lawyer",
+          topic: "Personal Injury Lawyer",
+          location: "Orlando",
+        },
+        3,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+    const matrixUrls = Object.values(result.matrix.cells).flatMap((cell) =>
+      cell.urls.map((row) => row.normalizedUrl),
+    );
+
+    expect(result.cleanInventory).toHaveLength(3);
+    expect(result.cleanInventory.some((row) => row.classification === "non_transactional")).toBe(
+      true,
+    );
+    expect(matrixUrls.every((url) => !url.includes("/blog/"))).toBe(true);
+    expect(result.matrix.topics).not.toContain("Tampa Case Study");
+    expect(result.matrix.topics).toContain("Car Accident Lawyer");
+    expect(result.matrix.topics).toContain("Personal Injury Lawyer");
+    expect(
+      result.contentNeeded.every((row) => !row.topic.includes("Case Study")),
+    ).toBe(true);
+    expect(
+      result.duplicates.every(
+        (dup) =>
+          !dup.urlA.includes("/blog/") && !dup.urlB.includes("/blog/"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not let includeInAnalysis override non-transactional classification", () => {
+    const rows = [
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/blog/team-update",
+          originalUrl: "https://example.com/blog/team-update",
+          topic: "Team Update",
+          location: "Blog",
+          classification: "non_transactional",
+          includeInAnalysis: true,
+        },
+        1,
+      ),
+    ];
+    const result = buildPipeline(rows, settings);
+
+    expect(result.matrix.topics).toHaveLength(0);
+    expect(result.contentNeeded).toHaveLength(0);
+    expect(result.duplicates).toHaveLength(0);
+  });
+
   it("rebuilds matrix from manually corrected location alias", () => {
     const rows = [
       makeRecord(

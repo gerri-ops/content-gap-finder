@@ -74,7 +74,7 @@ function createRecordBase(
     sourceName,
     lastmod: undefined,
     classification: "non_transactional",
-    includeInAnalysis: true,
+    includeInAnalysis: false,
   };
 }
 
@@ -131,6 +131,7 @@ export function parseCsvSource(file: CsvSourceFile): UrlRecord[] {
       )
         ? "transactional"
         : "non_transactional";
+      record.includeInAnalysis = record.classification === "transactional";
       return record;
     })
     .filter((record): record is UrlRecord => Boolean(record));
@@ -173,6 +174,7 @@ export function parseSitemapXml(
       record.classification = isTransactionalPage(record.normalizedUrl)
         ? "transactional"
         : "non_transactional";
+      record.includeInAnalysis = record.classification === "transactional";
       return record;
     })
     .filter((record): record is UrlRecord => Boolean(record));
@@ -201,6 +203,7 @@ export function parseUrlList(text: string, sourceName = "Pasted URL List"): UrlR
       record.classification = isTransactionalPage(record.normalizedUrl)
         ? "transactional"
         : "non_transactional";
+      record.includeInAnalysis = record.classification === "transactional";
       return record;
     })
     .filter((record): record is UrlRecord => Boolean(record));

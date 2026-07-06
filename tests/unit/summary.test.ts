@@ -86,6 +86,28 @@ describe("iterMatrixCells", () => {
 });
 
 describe("buildCoverageDetailRows", () => {
+  it("omits non-transactional URLs from coverage detail rows", () => {
+    const rows = [
+      makeRecord({}, 1),
+      makeRecord(
+        {
+          normalizedUrl: "https://example.com/blog/tampa-news",
+          originalUrl: "https://example.com/blog/tampa-news",
+          topic: "Tampa News",
+          location: "Blog",
+          classification: "non_transactional",
+          includeInAnalysis: false,
+        },
+        2,
+      ),
+    ];
+    const { matrix } = buildPipeline(rows, settings);
+    const detailRows = buildCoverageDetailRows(matrix);
+
+    expect(detailRows.every((row) => !row.url.includes("/blog/"))).toBe(true);
+    expect(detailRows.every((row) => row.topic !== "Tampa News")).toBe(true);
+  });
+
   it("omits /faqs/ URLs from coverage detail rows", () => {
     const rows = [
       makeRecord({}, 1),

@@ -151,7 +151,10 @@ export function ContentGapFinderApp() {
             value={row.original.classification}
             onChange={(event) => {
               const value = event.target.value as UrlRecord["classification"];
-              updateInventoryRow(row.original.id, { classification: value });
+              updateInventoryRow(row.original.id, {
+                classification: value,
+                includeInAnalysis: value === "transactional",
+              });
             }}
           >
             <option value="transactional">Transactional</option>
@@ -210,6 +213,7 @@ export function ContentGapFinderApp() {
             aria-label={`Include ${row.original.normalizedUrl}`}
             type="checkbox"
             checked={row.original.includeInAnalysis}
+            disabled={row.original.classification !== "transactional"}
             onChange={(event) =>
               updateInventoryRow(row.original.id, { includeInAnalysis: event.target.checked })
             }
@@ -601,6 +605,11 @@ export function ContentGapFinderApp() {
                 Re-run with manual edits
               </button>
             </div>
+            <p className="mb-3 text-sm text-slate-600">
+              All ingested URLs are listed here for review. Only transactional pages
+              with Include checked feed the gap matrix, coverage summary, and content-needed
+              reports. Non-transactional pages are excluded from analysis outputs.
+            </p>
             <p className="mb-3 text-sm text-slate-600">
               Detected URL structure:{" "}
               <span className="font-medium">
