@@ -3,7 +3,7 @@
 Content Gap Finder is a Next.js app for content strategists to ingest CSV files, sitemap XML files, sitemap URLs, and pasted URL lists, then produce:
 
 - a clean, deduplicated inventory of transactional pages,
-- a topic x location content gap matrix with status icons (`✅`, `⏳`, `❓`, `🚩`),
+- a topic x location content gap matrix with status icons (`✅`, `⏳`, `🟢`, `🚩`),
 - a content-needed recommendation list,
 - a potential duplicate report,
 - copy/download exports in CSV, TSV, and XLSX workbook format.

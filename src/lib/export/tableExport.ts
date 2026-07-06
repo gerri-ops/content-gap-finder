@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 
+import { statusToIcon } from "@/components/statusIcon";
 import { formatPublishedDateForDisplay } from "@/lib/publishedDate";
 import type {
   DuplicatePair,
@@ -78,12 +79,7 @@ export function buildMatrixRows(matrix: GapMatrix): Array<Record<string, string>
     const row: Record<string, string> = { topic };
     matrix.locations.forEach((location) => {
       const cell = matrix.cells[`${topic}|||${location}`];
-      const statusIcon =
-        cell.status === "published"
-          ? "✅"
-          : cell.status === "in_progress"
-            ? "⏳"
-            : "❓";
+      const statusIcon = statusToIcon(cell.status);
       row[location] = cell.hasPotentialDuplicate ? `${statusIcon} 🚩` : statusIcon;
     });
     return row;
@@ -108,7 +104,7 @@ export function exportWorkbook(args: {
     parentPage: row.parentPage,
     priority: row.priority,
     reason: row.reason,
-    status: "❓",
+    status: statusToIcon("needed"),
   }));
   const duplicateRows = args.duplicates.map((duplicate) => ({
     urlA: duplicate.urlA,
@@ -125,8 +121,7 @@ export function exportWorkbook(args: {
     pageTitle: row.pageTitle ?? "",
     topic: row.topic ?? "",
     location: row.location ?? "",
-    status:
-      row.status === "published" ? "✅" : row.status === "in_progress" ? "⏳" : "❓",
+    status: statusToIcon(row.status),
     publishedDate: formatPublishedDateForDisplay(row.status, row.publishedDate),
     sourceName: row.sourceName,
     sourceType: row.sourceType,
@@ -136,7 +131,6 @@ export function exportWorkbook(args: {
     {
       name: args.settings.name,
       primaryDomain: args.settings.primaryDomain,
-      industry: args.settings.industry,
       geographicTargetType: args.settings.geographicTargetType,
       targetLocations: args.settings.targetLocations.join(", "),
       preferredUrlPattern: args.settings.preferredUrlPattern,

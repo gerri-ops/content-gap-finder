@@ -6,7 +6,6 @@ import type { ProjectSettings, UrlRecord } from "@/lib/types";
 const settings: ProjectSettings = {
   name: "Test",
   primaryDomain: "https://example.com",
-  industry: "Legal",
   geographicTargetType: "city",
   targetLocations: ["Tampa", "Orlando"],
   preferredUrlPattern: "/{location}/{topic}",

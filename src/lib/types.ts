@@ -9,7 +9,6 @@ export type GeographicTargetType = "state" | "county" | "city";
 export interface ProjectSettings {
   name: string;
   primaryDomain: string;
-  industry: string;
   geographicTargetType: GeographicTargetType;
   targetLocations: string[];
   preferredUrlPattern: string;

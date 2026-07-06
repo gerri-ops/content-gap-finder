@@ -83,7 +83,6 @@ export function ContentGapFinderApp() {
   const [project, setProject] = useState<ProjectSettings>({
     name: "Content Gap Project",
     primaryDomain: "https://example.com",
-    industry: "",
     geographicTargetType: "city",
     targetLocations: [],
     preferredUrlPattern: "/{location}/{topic}",
@@ -176,7 +175,7 @@ export function ContentGapFinderApp() {
           >
             <option value="published">✅ Published</option>
             <option value="in_progress">⏳ In progress</option>
-            <option value="needed">❓ Needed</option>
+            <option value="needed">{statusToIcon("needed")} Needed</option>
           </select>
         ),
       },
@@ -238,7 +237,7 @@ export function ContentGapFinderApp() {
       },
       { header: "Priority", accessorKey: "priority" },
       { header: "Reason", accessorKey: "reason" },
-      { header: "Status", accessorKey: "status", cell: () => "❓" },
+      { header: "Status", accessorKey: "status", cell: () => statusToIcon("needed") },
     ];
 
   const duplicateColumns: ColumnDef<PipelineResult["duplicates"][number]>[] = [
@@ -426,14 +425,6 @@ export function ContentGapFinderApp() {
             onChange={(event) =>
               setProject((current) => ({ ...current, primaryDomain: event.target.value }))
             }
-          />
-        </label>
-        <label className="text-sm font-medium">
-          Industry
-          <input
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            value={project.industry}
-            onChange={(event) => setProject((current) => ({ ...current, industry: event.target.value }))}
           />
         </label>
         <label className="text-sm font-medium">
@@ -699,7 +690,7 @@ export function ContentGapFinderApp() {
               </table>
             </div>
             <p className="mt-3 text-sm text-slate-600">
-              Legend: ✅ Published · ⏳ In progress · ❓ Needed · 🚩 Potential duplicate
+              Legend: ✅ Published · ⏳ In progress · {statusToIcon("needed")} Needed · 🚩 Potential duplicate
             </p>
           </section>
 
